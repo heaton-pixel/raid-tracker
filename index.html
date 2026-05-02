@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raid — Champion Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9933a;
+    --gold-light: #f0c060;
+    --gold-dark: #7a5520;
+    --red-mid: #8b2222;
+    --bg-deep: #0a0608;
+    --bg-card: #1a1018;
+    --border-ornate: #4a2e10;
+    --text-primary: #e8d5a3;
+    --text-secondary: #9a8060;
+    --text-dim: #5a4535;
+    --green-text: #7ed492;
+    --amber-text: #f0c060;
+    --red-text: #f07070;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Open Sans', sans-serif;
+    background-color: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(92,26,26,0.25) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(74,46,16,0.2) 0%, transparent 60%);
+  }
+
+  /* ── SHARED ── */
+  .header { text-align: center; margin-bottom: 28px; }
+  .header-rule { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .header-rule-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent); }
+  .header-diamond { width: 8px; height: 8px; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+  .title-main { font-family: 'Cinzel Decorative', serif; font-size: 22px; font-weight: 700; color: var(--gold-light); letter-spacing: 0.08em; text-shadow: 0 0 30px rgba(201,147,58,0.4); margin-bottom: 4px; }
+  .title-sub { font-family: 'Cinzel', serif; font-size: 11px; color: var(--text-secondary); letter-spacing: 0.2em; text-transform: uppercase; }
+  .corner { position: absolute; width: 12px; height: 12px; border-color: var(--gold-dark); border-style: solid; }
+  .corner-tl { top:-1px; left:-1px; border-width: 2px 0 0 2px; }
+  .corner-tr { top:-1px; right:-1px; border-width: 2px 2px 0 0; }
+  .corner-bl { bottom:-1px; left:-1px; border-width: 0 0 2px 2px; }
+  .corner-br { bottom:-1px; right:-1px; border-width: 0 2px 2px 0; }
+
+  /* ── FOOD TRACKER ── */
+  .summary-bar { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+  .sum-card {
+    background: var(--bg-card); border: 1px solid var(--border-ornate); border-top: 2px solid var(--gold-dark);
+    padding: 12px 8px; text-align: center;
+    clip-path: polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  }
+  .sum-val { font-family: 'Cinzel', serif; font-size: 26px; font-weight: 600; color: var(--gold-light); line-height: 1; margin-bottom: 4px; }
+  .sum-label { font-size: 10px; color: var(--text-secondary); letter-spacing: 0.1em; text-transform: uppercase; }
+  .save-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 2px; }
+  .save-status { font-family: 'Cinzel', serif; font-size: 10px; color: var(--text-dim); letter-spacing: 0.08em; display: flex; align-items: center; gap: 6px; transition: color 0.4s; }
+  .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); transition: background 0.4s; }
+  .save-status.saved .save-dot { background: var(--green-text); }
+  .save-status.saved { color: var(--green-text); }
+  .reset-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--red-text); background: transparent; border: 1px solid var(--red-mid); padding: 5px 14px; cursor: pointer;
+    clip-path: polygon(6px 0%,calc(100% - 6px) 0%,100% 50%,calc(100% - 6px) 100%,6px 100%,0% 50%);
+    transition: background 0.15s;
+  }
+  .reset-btn:hover { background: rgba(139,34,34,0.2); }
+  .reset-btn:active { transform: scale(0.95); }
+  .tier-card { background: var(--bg-card); border: 1px solid var(--border-ornate); position: relative; margin-bottom: 4px; }
+  .tier-card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background: linear-gradient(to right,transparent,var(--gold-dark),var(--gold),var(--gold-dark),transparent); }
+  .tier-header { display:flex; align-items:center; gap:10px; padding:10px 16px 0; }
+  .tier-header-line { flex:1; height:1px; background: linear-gradient(to right,transparent,var(--border-ornate)); }
+  .tier-header-line.right { background: linear-gradient(to left,transparent,var(--border-ornate)); }
+  .tier-label { font-family:'Cinzel',serif; font-size:11px; color:var(--gold); letter-spacing:0.15em; text-transform:uppercase; white-space:nowrap; }
+  .stats-row { display:grid; grid-template-columns:1fr 1fr; padding:16px; }
+  .stat-block { display:flex; flex-direction:column; align-items:center; padding:8px 12px; }
+  .stat-block + .stat-block { border-left:1px solid var(--border-ornate); }
+  .big-num { font-family:'Cinzel',serif; font-size:56px; font-weight:700; color:var(--gold-light); line-height:1; margin-bottom:6px; text-shadow:0 0 20px rgba(201,147,58,0.3); transition:color 0.3s; }
+  .big-num.has-incoming { color:var(--green-text); text-shadow:0 0 20px rgba(126,212,146,0.3); }
+  .stat-desc { font-size:11px; color:var(--text-secondary); text-align:center; line-height:1.5; letter-spacing:0.05em; text-transform:uppercase; font-weight:600; }
+  .incoming-tag { font-size:10px; color:var(--green-text); background:rgba(45,110,58,0.3); border:1px solid rgba(126,212,146,0.2); border-radius:2px; padding:2px 8px; margin-top:4px; display:none; letter-spacing:0.05em; }
+  .counter-row { display:flex; align-items:center; gap:12px; margin-top:14px; }
+  .counter-btn {
+    width:36px; height:36px; border:1px solid var(--gold-dark);
+    background:linear-gradient(135deg,#1e1218,#2a1820); color:var(--gold); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    clip-path:polygon(6px 0%,calc(100% - 6px) 0%,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0% calc(100% - 6px),0% 6px);
+    transition:background 0.15s,color 0.15s; font-family:'Cinzel',serif;
+  }
+  .counter-btn:hover { background:linear-gradient(135deg,#3a1a20,#4a2010); color:var(--gold-light); }
+  .counter-btn:active { transform:scale(0.92); }
+  .prog-section { padding:0 16px 14px; }
+  .prog-label-row { display:flex; justify-content:space-between; margin-bottom:6px; }
+  .prog-label { font-size:10px; color:var(--text-dim); letter-spacing:0.08em; text-transform:uppercase; }
+  .prog-pct { font-family:'Cinzel',serif; font-size:10px; color:var(--gold-dark); }
+  .prog-track { height:6px; background:rgba(255,255,255,0.05); border:1px solid var(--border-ornate); overflow:hidden; }
+  .prog-fill { height:100%; background:linear-gradient(to right,var(--gold-dark),var(--gold)); transition:width 0.3s ease; }
+  .status-banner {
+    margin:0 16px 16px; padding:7px 14px; text-align:center;
+    font-family:'Cinzel',serif; font-size:11px; letter-spacing:0.08em; border:1px solid;
+    clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 50%,calc(100% - 8px) 100%,8px 100%,0% 50%);
+  }
+  .status-ready   { border-color:#2d6e3a; background:rgba(45,110,58,0.2);  color:var(--green-text); }
+  .status-partial { border-color:#7a5520; background:rgba(58,42,8,0.5);    color:var(--amber-text); }
+  .status-need    { border-color:#7a2020; background:rgba(58,10,10,0.5);   color:var(--red-text); }
+  .status-empty   { border-color:var(--border-ornate); background:rgba(255,255,255,0.03); color:var(--text-dim); }
+  .chain-connector { display:flex; align-items:center; justify-content:center; gap:10px; padding:6px 0; margin:2px 0; }
+  .chain-line { flex:1; height:1px; background:linear-gradient(to right,transparent,var(--border-ornate),transparent); max-width:60px; }
+  .chain-text { font-family:'Cinzel',serif; font-size:10px; color:var(--text-dim); letter-spacing:0.1em; text-transform:uppercase; }
+  .chain-text.has-flow { color:var(--gold-dark); }
+
+  /* ── SECTION DIVIDER ── */
+  .section-divider { margin: 36px 0 32px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .divider-rule { display:flex; align-items:center; gap:12px; width:100%; }
+  .divider-line { flex:1; height:1px; background:linear-gradient(to right,transparent,var(--gold-dark),var(--gold),var(--gold-dark),transparent); }
+  .divider-gem { width:10px; height:10px; background:var(--gold); transform:rotate(45deg); flex-shrink:0; }
+  .divider-title { font-family:'Cinzel Decorative',serif; font-size:18px; font-weight:700; color:var(--gold-light); letter-spacing:0.08em; text-shadow:0 0 30px rgba(201,147,58,0.4); }
+  .divider-sub { font-family:'Cinzel',serif; font-size:10px; color:var(--text-secondary); letter-spacing:0.2em; text-transform:uppercase; }
+
+  /* ── MERCY TRACKER ── */
+  .shard-card { background:var(--bg-card); border:1px solid var(--border-ornate); position:relative; margin-bottom:14px; }
+  .shard-card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; }
+  .shard-ancient::before { background:linear-gradient(to right,transparent,#4a6e9a,#7ab0e0,#4a6e9a,transparent); }
+  .shard-void::before    { background:linear-gradient(to right,transparent,#5a2a7a,#9a50cc,#5a2a7a,transparent); }
+  .shard-sacred::before  { background:linear-gradient(to right,transparent,var(--gold-dark),var(--gold),var(--gold-dark),transparent); }
+  .shard-primal::before  { background:linear-gradient(to right,transparent,#7a2a10,#e05020,#7a2a10,transparent); }
+
+  .shard-header { display:flex; align-items:center; gap:10px; padding:12px 16px 0; }
+  .shard-icon { font-size:18px; flex-shrink:0; }
+  .shard-name { font-family:'Cinzel',serif; font-size:13px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; }
+  .shard-ancient .shard-name { color:#7ab0e0; }
+  .shard-void    .shard-name { color:#9a50cc; }
+  .shard-sacred  .shard-name { color:var(--gold-light); }
+  .shard-primal  .shard-name { color:#e08050; }
+  .shard-base-rates { font-family:'Cinzel',serif; font-size:10px; margin-left:auto; letter-spacing:0.06em; text-align:right; line-height:1.8; }
+  .shard-ancient .shard-base-rates { color:#8ab8d8; }
+  .shard-void    .shard-base-rates { color:#b080d8; }
+  .shard-sacred  .shard-base-rates { color:var(--gold); }
+  .shard-primal  .shard-base-rates { color:#d88060; }
+
+  .mercy-grid { display:grid; gap:12px; padding:14px 16px; }
+  .mercy-grid.cols-1 { grid-template-columns:1fr; }
+  .mercy-grid.cols-2 { grid-template-columns:1fr 1fr; }
+  .mercy-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+
+  .mercy-block { background:rgba(0,0,0,0.2); border:1px solid var(--border-ornate); padding:12px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; }
+  .mercy-type { font-family:'Cinzel',serif; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); }
+  .mercy-count { font-family:'Cinzel',serif; font-size:38px; font-weight:700; color:var(--gold-light); line-height:1; text-shadow:0 0 16px rgba(201,147,58,0.25); }
+  .mercy-count.mercy-active { color:#ff9944; text-shadow:0 0 16px rgba(255,153,68,0.4); }
+  .mercy-count.mercy-danger { color:var(--red-text); text-shadow:0 0 16px rgba(240,112,112,0.5); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  .mercy-sublabel { font-size:10px; color:var(--text-secondary); text-align:center; line-height:1.4; }
+  .mercy-chance-row { display:flex; align-items:center; gap:6px; margin-top:2px; }
+  .mercy-chance { font-family:'Cinzel',serif; font-size:11px; font-weight:600; }
+  .mercy-chance.base { color:var(--text-secondary); }
+  .mercy-chance.boosted { color:#ff9944; }
+  .mercy-chance.high { color:var(--red-text); }
+  .mercy-badge { font-size:9px; padding:1px 6px; border-radius:2px; letter-spacing:0.06em; font-family:'Cinzel',serif; }
+  .badge-mercy { background:rgba(255,153,68,0.2); border:1px solid rgba(255,153,68,0.3); color:#ff9944; }
+  .badge-safe  { background:rgba(90,69,53,0.3); border:1px solid var(--border-ornate); color:var(--text-dim); }
+
+  .mercy-counter-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .mercy-btn {
+    width:30px; height:30px; border:1px solid var(--gold-dark);
+    background:linear-gradient(135deg,#1e1218,#2a1820); color:var(--gold); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);
+    transition:background 0.15s; font-family:'Cinzel',serif;
+  }
+  .mercy-btn:hover { background:linear-gradient(135deg,#3a1a20,#4a2010); color:var(--gold-light); }
+  .mercy-btn:active { transform:scale(0.92); }
+
+  .mercy-prog-track { width:100%; height:4px; background:rgba(255,255,255,0.05); border:1px solid var(--border-ornate); overflow:hidden; margin-top:4px; }
+  .mercy-prog-fill { height:100%; transition:width 0.3s ease; }
+  .fill-epic   { background:linear-gradient(to right,#4a6e9a,#9a50cc); }
+  .fill-leg    { background:linear-gradient(to right,var(--gold-dark),var(--gold)); }
+  .fill-myth   { background:linear-gradient(to right,#7a2a10,#e05020); }
+
+  .shard-reset-row { display:flex; justify-content:flex-end; padding:0 16px 12px; gap:8px; flex-wrap:wrap; }
+  .shard-reset-btn {
+    font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--red-text); background:rgba(139,34,34,0.15); border:1px solid var(--red-mid); padding:5px 12px; cursor:pointer;
+    clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 50%,calc(100% - 4px) 100%,4px 100%,0% 50%);
+    transition:background 0.15s,color 0.15s;
+  }
+  .shard-reset-btn:hover { background:rgba(139,34,34,0.35); color:#ffaaaa; border-color:#cc3333; }
+
+  /* ── CONFIRM OVERLAY ── */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:100; align-items:center; justify-content:center; }
+  .overlay.visible { display:flex; }
+  .confirm-box { background:var(--bg-card); border:1px solid var(--border-ornate); border-top:2px solid var(--gold-dark); padding:28px 24px; text-align:center; max-width:300px; width:90%; position:relative; }
+  .confirm-box::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:linear-gradient(to right,transparent,var(--gold-dark),var(--gold),var(--gold-dark),transparent); }
+  .confirm-title { font-family:'Cinzel',serif; font-size:14px; color:var(--gold-light); margin-bottom:10px; letter-spacing:0.08em; }
+  .confirm-text  { font-size:12px; color:var(--text-secondary); margin-bottom:20px; line-height:1.6; }
+  .confirm-btns  { display:flex; gap:10px; justify-content:center; }
+  .confirm-yes { font-family:'Cinzel',serif; font-size:11px; letter-spacing:0.08em; color:var(--red-text); background:rgba(139,34,34,0.2); border:1px solid var(--red-mid); padding:8px 20px; cursor:pointer; clip-path:polygon(6px 0%,calc(100% - 6px) 0%,100% 50%,calc(100% - 6px) 100%,6px 100%,0% 50%); }
+  .confirm-yes:hover { background:rgba(139,34,34,0.4); }
+  .confirm-no  { font-family:'Cinzel',serif; font-size:11px; letter-spacing:0.08em; color:var(--gold); background:transparent; border:1px solid var(--gold-dark); padding:8px 20px; cursor:pointer; clip-path:polygon(6px 0%,calc(100% - 6px) 0%,100% 50%,calc(100% - 6px) 100%,6px 100%,0% 50%); }
+  .confirm-no:hover { background:rgba(201,147,58,0.1); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ FOOD TRACKER ═══════════════ -->
+<div class="header">
+  <div class="header-rule"><div class="header-rule-line"></div><div class="header-diamond"></div><div class="header-rule-line"></div></div>
+  <div class="title-main">Food Tracker</div>
+  <div class="title-sub">Champion Ascension Planner</div>
+  <div class="header-rule" style="margin-top:10px;"><div class="header-rule-line"></div><div class="header-diamond"></div><div class="header-rule-line"></div></div>
+</div>
+
+<div class="summary-bar">
+  <div class="sum-card"><div class="sum-val" id="s-ready">0</div><div class="sum-label">Ready</div></div>
+  <div class="sum-card"><div class="sum-val" id="s-food">0</div><div class="sum-label">Food owned</div></div>
+  <div class="sum-card"><div class="sum-val" id="s-need">0</div><div class="sum-label">Still needed</div></div>
+</div>
+
+<div class="save-bar">
+  <div class="save-status" id="save-status">
+    <div class="save-dot" id="save-dot"></div>
+    <span id="save-text">Loading...</span>
+  </div>
+  <button class="reset-btn" onclick="confirmReset('food')">&#9760; Reset food</button>
+</div>
+
+<div id="food-cards"></div>
+
+<!-- ═══════════════ DIVIDER ═══════════════ -->
+<div class="section-divider">
+  <div class="divider-rule"><div class="divider-line"></div><div class="divider-gem"></div><div class="divider-line"></div></div>
+  <div class="divider-title">Mercy Tracker</div>
+  <div class="divider-sub">Shard Pull Counter &amp; Mercy Rates</div>
+  <div class="divider-rule"><div class="divider-line"></div><div class="divider-gem"></div><div class="divider-line"></div></div>
+</div>
+
+<div id="mercy-cards"></div>
+
+<!-- ═══════════════ CONFIRM OVERLAY ═══════════════ -->
+<div class="overlay" id="overlay">
+  <div class="confirm-box">
+    <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+    <div class="confirm-title" id="confirm-title">Reset?</div>
+    <div class="confirm-text" id="confirm-text">This cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="confirm-yes" id="confirm-yes-btn">Confirm</button>
+      <button class="confirm-no" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+const STORAGE_KEY = 'raid-tracker-v2';
+
+const foodState = { b2:0,f2:0,b3:0,f3:0,b4:0,f4:0 };
+
+// mercy counters: pulls since last pull of that type
+const mercyState = {
+  ancient: { epic:0, leg:0 },
+  void:    { epic:0, leg:0 },
+  sacred:  { leg:0 },
+  primal:  { leg:0, myth:0 }
+};
+
+let saveTimer = null;
+
+/* ══════════════════════════════════════════
+   STORAGE
+══════════════════════════════════════════ */
+function saveAll() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ food: foodState, mercy: mercyState }));
+    setSaveStatus('saved');
+  } catch(e) { setSaveStatus('error'); }
+}
+function loadAll() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d.food)  Object.keys(foodState).forEach(k => { if (d.food[k]  !== undefined) foodState[k]  = d.food[k]; });
+      if (d.mercy) {
+        Object.keys(mercyState).forEach(shard => {
+          if (d.mercy[shard]) Object.keys(mercyState[shard]).forEach(t => { if (d.mercy[shard][t] !== undefined) mercyState[shard][t] = d.mercy[shard][t]; });
+        });
+      }
+      setSaveStatus('saved');
+    } else { setSaveStatus('new'); }
+  } catch(e) { setSaveStatus('new'); }
+}
+function setSaveStatus(type) {
+  const el = document.getElementById('save-status');
+  const txt = document.getElementById('save-text');
+  el.className = 'save-status';
+  if (type === 'saved')  { el.classList.add('saved'); txt.textContent = 'Progress saved'; }
+  else if (type === 'saving') { txt.textContent = 'Saving...'; }
+  else if (type === 'new')    { txt.textContent = 'No saved data yet'; }
+  else { txt.textContent = 'Could not save'; }
+}
+function scheduleSave() {
+  setSaveStatus('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveAll, 600);
+}
+
+/* ══════════════════════════════════════════
+   CONFIRM OVERLAY
+══════════════════════════════════════════ */
+let pendingResetFn = null;
+function confirmReset(type, shard, counter) {
+  const titles = { food:'Reset Food Tracker?', shard:'Reset Counter?' };
+  const texts  = { food:'All food and champion counts will be cleared.', shard:'This counter will return to zero.' };
+  document.getElementById('confirm-title').textContent = type === 'food' ? titles.food : titles.shard;
+  document.getElementById('confirm-text').textContent  = type === 'food' ? texts.food  : texts.shard;
+  if (type === 'food') {
+    pendingResetFn = () => { Object.keys(foodState).forEach(k => foodState[k]=0); recalcFood(); saveAll(); };
+  } else {
+    pendingResetFn = () => { mercyState[shard][counter]=0; recalcMercy(); saveAll(); };
+  }
+  document.getElementById('overlay').classList.add('visible');
+}
+function closeOverlay() { document.getElementById('overlay').classList.remove('visible'); }
+document.getElementById('confirm-yes-btn').onclick = () => { if (pendingResetFn) { pendingResetFn(); pendingResetFn=null; } closeOverlay(); };
+
+/* ══════════════════════════════════════════
+   FOOD TRACKER
+══════════════════════════════════════════ */
+const FOOD_TIERS = [
+  { tier:2, label:'2\u2605 \u2192 3\u2605  \u00b7  2 food per upgrade', foodPer:2 },
+  { tier:3, label:'3\u2605 \u2192 4\u2605  \u00b7  3 food per upgrade', foodPer:3 },
+  { tier:4, label:'4\u2605 \u2192 5\u2605  \u00b7  4 food per upgrade', foodPer:4 },
+];
+
+function buildFood() {
+  const c = document.getElementById('food-cards');
+  FOOD_TIERS.forEach((t,i) => {
+    if (i > 0) {
+      const a = document.createElement('div');
+      a.className = 'chain-connector';
+      a.innerHTML = `<div class="chain-line"></div><div class="chain-text" id="arrow-${t.tier}">\u25bc 0 ascended flow into ${t.tier}\u2605 food</div><div class="chain-line"></div>`;
+      c.appendChild(a);
+    }
+    const div = document.createElement('div');
+    div.className = 'tier-card';
+    div.innerHTML = `
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="tier-header">
+        <div class="tier-header-line"></div>
+        <div class="tier-label">${t.label}</div>
+        <div class="tier-header-line right"></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-block">
+          <div class="big-num" id="disp-b${t.tier}">0</div>
+          <div class="stat-desc">${t.tier}\u2605 champions<br>ready to ascend</div>
+          <div class="counter-row">
+            <button class="counter-btn" data-fkey="b${t.tier}" data-d="-1">&#8722;</button>
+            <button class="counter-btn" data-fkey="b${t.tier}" data-d="1">&#43;</button>
+          </div>
+        </div>
+        <div class="stat-block">
+          <div class="big-num" id="disp-f${t.tier}">0</div>
+          <div class="stat-desc">${t.tier}\u2605 food<br>champions owned</div>
+          <div class="incoming-tag" id="inc${t.tier}"></div>
+          <div class="counter-row">
+            <button class="counter-btn" data-fkey="f${t.tier}" data-d="-1">&#8722;</button>
+            <button class="counter-btn" data-fkey="f${t.tier}" data-d="1">&#43;</button>
+          </div>
+        </div>
+      </div>
+      <div class="prog-section">
+        <div class="prog-label-row">
+          <span class="prog-label">Food progress</span>
+          <span class="prog-pct" id="pct${t.tier}">0%</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog${t.tier}" style="width:0%"></div></div>
+      </div>
+      <div class="status-banner status-empty" id="note${t.tier}">Awaiting champions...</div>
+    `;
+    c.appendChild(div);
+  });
+  c.addEventListener('click', e => {
+    const btn = e.target.closest('[data-fkey]');
+    if (!btn) return;
+    foodState[btn.dataset.fkey] = Math.max(0, foodState[btn.dataset.fkey] + parseInt(btn.dataset.d));
+    recalcFood(); scheduleSave();
+  });
+}
+
+function recalcFood() {
+  let sReady=0,sFood=0,sNeed=0,cascadeIn=0;
+  FOOD_TIERS.forEach((t,i) => {
+    const base=foodState['b'+t.tier], manual=foodState['f'+t.tier], total=manual+cascadeIn, need=t.foodPer;
+    const possible = base===0 ? 0 : Math.min(base, Math.floor(total/need));
+    const foodNeeded=base*need, shortfall=Math.max(0,foodNeeded-total);
+    const pct = foodNeeded>0 ? Math.min(100,Math.round((total/foodNeeded)*100)) : 0;
+    sFood+=manual; if(base>0){sReady+=possible;sNeed+=shortfall;}
+    document.getElementById('disp-b'+t.tier).textContent=base;
+    const fe=document.getElementById('disp-f'+t.tier);
+    fe.textContent=total; fe.className='big-num'+(cascadeIn>0?' has-incoming':'');
+    const ie=document.getElementById('inc'+t.tier);
+    if(cascadeIn>0){ie.style.display='block';ie.textContent='+'+cascadeIn+' from previous tier';}else{ie.style.display='none';}
+    if(i>0){const ae=document.getElementById('arrow-'+t.tier);if(ae){ae.textContent='\u25bc '+cascadeIn+' ascended flow into '+t.tier+'\u2605 food';ae.className='chain-text'+(cascadeIn>0?' has-flow':'');}}
+    document.getElementById('prog'+t.tier).style.width=pct+'%';
+    document.getElementById('pct'+t.tier).textContent=pct+'%';
+    const ne=document.getElementById('note'+t.tier); ne.className='status-banner';
+    if(base===0){ne.classList.add('status-empty');ne.textContent='Awaiting champions...';}
+    else if(possible>=base){ne.classList.add('status-ready');ne.textContent='All '+base+' ascension'+(base>1?'s':'')+' ready \u2014 march to battle!';}
+    else if(possible>0){ne.classList.add('status-partial');ne.textContent=possible+' of '+base+' ready \u2014 need '+shortfall+' more food.';}
+    else{ne.classList.add('status-need');ne.textContent='Need '+foodNeeded+' food \u2014 short by '+shortfall+'.';}
+    cascadeIn=possible;
+  });
+  document.getElementById('s-ready').textContent=sReady;
+  document.getElementById('s-food').textContent=sFood;
+  document.getElementById('s-need').textContent=sNeed;
+}
+
+/* ══════════════════════════════════════════
+   MERCY TRACKER
+══════════════════════════════════════════ */
+
+// Config: for each shard, define mercy counters
+// threshold = pulls before mercy kicks in
+// increment = % added per pull after threshold
+// cap = max pulls before guaranteed (null = no hard cap shown)
+// baseChance = starting % shown
+const SHARDS = [
+  {
+    key:'ancient', name:'Ancient Shard', icon:'🔵', cls:'shard-ancient',
+    rates:'Rare 91.5% · Epic 8% · Leg 0.5%',
+    counters:[
+      { key:'epic', label:'Epic Counter', rarity:'Epic',      threshold:20, increment:2, baseChance:8,  fillCls:'fill-epic', maxPulls:null },
+      { key:'leg',  label:'Leg Counter',  rarity:'Legendary', threshold:200,increment:5, baseChance:0.5,fillCls:'fill-leg',  maxPulls:null },
+    ]
+  },
+  {
+    key:'void', name:'Void Shard', icon:'🟣', cls:'shard-void',
+    rates:'Rare 91.5% · Epic 8% · Leg 0.5%',
+    counters:[
+      { key:'epic', label:'Epic Counter', rarity:'Epic',      threshold:20, increment:2, baseChance:8,  fillCls:'fill-epic', maxPulls:null },
+      { key:'leg',  label:'Leg Counter',  rarity:'Legendary', threshold:200,increment:5, baseChance:0.5,fillCls:'fill-leg',  maxPulls:null },
+    ]
+  },
+  {
+    key:'sacred', name:'Sacred Shard', icon:'🟡', cls:'shard-sacred',
+    rates:'Epic 94% · Leg 6%',
+    counters:[
+      { key:'leg', label:'Leg Counter', rarity:'Legendary', threshold:12, increment:2, baseChance:6, fillCls:'fill-leg', maxPulls:null },
+    ]
+  },
+  {
+    key:'primal', name:'Primal Shard', icon:'🔥', cls:'shard-primal',
+    rates:'Rare 82.5% · Epic 16% · Leg 1% · Myth 0.5%',
+    counters:[
+      { key:'leg',  label:'Leg Counter',  rarity:'Legendary', threshold:75, increment:1,  baseChance:1,  fillCls:'fill-leg',  maxPulls:null },
+      { key:'myth', label:'Myth Counter', rarity:'Mythical',  threshold:200,increment:10, baseChance:0.5,fillCls:'fill-myth', maxPulls:null },
+    ]
+  },
+];
+
+function calcMercyChance(counter, pulls) {
+  if (pulls <= counter.threshold) return counter.baseChance;
+  const extra = (pulls - counter.threshold) * counter.increment;
+  return counter.baseChance + extra;
+}
+
+function buildMercy() {
+  const c = document.getElementById('mercy-cards');
+  SHARDS.forEach(shard => {
+    const cols = shard.counters.length === 1 ? 'cols-1' : shard.counters.length === 2 ? 'cols-2' : 'cols-3';
+    const div = document.createElement('div');
+    div.className = `shard-card ${shard.cls}`;
+    let counterHTML = '';
+    shard.counters.forEach(counter => {
+      counterHTML += `
+        <div class="mercy-block">
+          <div class="mercy-type">${counter.label}</div>
+          <div class="mercy-count" id="mc-${shard.key}-${counter.key}">0</div>
+          <div class="mercy-sublabel" id="ml-${shard.key}-${counter.key}">Base rate: ${counter.baseChance}%</div>
+          <div class="mercy-chance-row">
+            <span class="mercy-chance base" id="mchance-${shard.key}-${counter.key}">${counter.baseChance}%</span>
+            <span class="mercy-badge badge-safe" id="mbadge-${shard.key}-${counter.key}">No mercy</span>
+          </div>
+          <div class="mercy-prog-track">
+            <div class="mercy-prog-fill ${counter.fillCls}" id="mprog-${shard.key}-${counter.key}" style="width:0%"></div>
+          </div>
+          <div class="mercy-counter-row">
+            <button class="mercy-btn" data-shard="${shard.key}" data-counter="${counter.key}" data-d="-1">&#8722;</button>
+            <button class="mercy-btn" data-shard="${shard.key}" data-counter="${counter.key}" data-d="1">&#43;</button>
+          </div>
+        </div>
+      `;
+    });
+
+    // reset buttons
+    let resetBtns = shard.counters.map(counter =>
+      `<button class="shard-reset-btn" onclick="confirmReset('shard','${shard.key}','${counter.key}')">Reset ${counter.label}</button>`
+    ).join('');
+
+    div.innerHTML = `
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="shard-header">
+        <span class="shard-icon">${shard.icon}</span>
+        <span class="shard-name">${shard.name}</span>
+        <span class="shard-base-rates">${shard.rates.split(' · ').join('<br>')}</span>
+      </div>
+      <div class="mercy-grid ${cols}">${counterHTML}</div>
+      <div class="shard-reset-row">${resetBtns}</div>
+    `;
+    c.appendChild(div);
+  });
+
+  document.getElementById('mercy-cards').addEventListener('click', e => {
+    const btn = e.target.closest('[data-shard]');
+    if (!btn) return;
+    const { shard, counter, d } = btn.dataset;
+    mercyState[shard][counter] = Math.max(0, mercyState[shard][counter] + parseInt(d));
+    recalcMercy(); scheduleSave();
+  });
+}
+
+function recalcMercy() {
+  SHARDS.forEach(shard => {
+    shard.counters.forEach(counter => {
+      const pulls = mercyState[shard.key][counter.key];
+      const chance = calcMercyChance(counter, pulls);
+      const inMercy = pulls > counter.threshold;
+      const progress = Math.min(100, Math.round((pulls / (counter.threshold * 1.5)) * 100));
+
+      const countEl   = document.getElementById(`mc-${shard.key}-${counter.key}`);
+      const subEl     = document.getElementById(`ml-${shard.key}-${counter.key}`);
+      const chanceEl  = document.getElementById(`mchance-${shard.key}-${counter.key}`);
+      const badgeEl   = document.getElementById(`mbadge-${shard.key}-${counter.key}`);
+      const progEl    = document.getElementById(`mprog-${shard.key}-${counter.key}`);
+
+      countEl.textContent = pulls;
+      progEl.style.width = progress + '%';
+
+      if (inMercy) {
+        const pullsInMercy = pulls - counter.threshold;
+        const isCritical = chance >= counter.baseChance * 5;
+        countEl.className = isCritical ? 'mercy-count mercy-danger' : 'mercy-count mercy-active';
+        chanceEl.className = isCritical ? 'mercy-chance high' : 'mercy-chance boosted';
+        chanceEl.textContent = chance.toFixed(1) + '%';
+        badgeEl.className = 'mercy-badge badge-mercy';
+        badgeEl.textContent = 'Mercy active';
+        subEl.textContent = pullsInMercy + ' pull' + (pullsInMercy !== 1 ? 's' : '') + ' into mercy (+' + (chance - counter.baseChance).toFixed(1) + '% bonus)';
+      } else {
+        countEl.className = 'mercy-count';
+        chanceEl.className = 'mercy-chance base';
+        chanceEl.textContent = counter.baseChance + '%';
+        badgeEl.className = 'mercy-badge badge-safe';
+        badgeEl.textContent = 'No mercy';
+        const remaining = counter.threshold - pulls;
+        subEl.textContent = remaining + ' pull' + (remaining !== 1 ? 's' : '') + ' until ' + counter.rarity + ' mercy kicks in';
+      }
+    });
+  });
+}
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+buildFood();
+buildMercy();
+loadAll();
+recalcFood();
+recalcMercy();
+</script>
+</body>
+</html>
