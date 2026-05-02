@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raid — Champion Food Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9933a;
+    --gold-light: #f0c060;
+    --gold-dark: #7a5520;
+    --red-dark: #5c1a1a;
+    --red-mid: #8b2222;
+    --bg-deep: #0a0608;
+    --bg-card: #1a1018;
+    --border-ornate: #4a2e10;
+    --text-primary: #e8d5a3;
+    --text-secondary: #9a8060;
+    --text-dim: #5a4535;
+    --green-text: #7ed492;
+    --amber-text: #f0c060;
+    --red-text: #f07070;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Open Sans', sans-serif;
+    background-color: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(92,26,26,0.25) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(74,46,16,0.2) 0%, transparent 60%);
+  }
+
+  .header { text-align: center; margin-bottom: 28px; }
+  .header-rule { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .header-rule-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent); }
+  .header-diamond { width: 8px; height: 8px; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+  .title-main { font-family: 'Cinzel Decorative', serif; font-size: 22px; font-weight: 700; color: var(--gold-light); letter-spacing: 0.08em; text-shadow: 0 0 30px rgba(201,147,58,0.4); margin-bottom: 4px; }
+  .title-sub { font-family: 'Cinzel', serif; font-size: 11px; color: var(--text-secondary); letter-spacing: 0.2em; text-transform: uppercase; }
+
+  .summary-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .sum-card {
+    background: var(--bg-card); border: 1px solid var(--border-ornate); border-top: 2px solid var(--gold-dark);
+    padding: 12px 8px; text-align: center;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  .sum-val { font-family: 'Cinzel', serif; font-size: 26px; font-weight: 600; color: var(--gold-light); line-height: 1; margin-bottom: 4px; }
+  .sum-label { font-size: 10px; color: var(--text-secondary); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .save-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 2px; }
+  .save-status { font-family: 'Cinzel', serif; font-size: 10px; color: var(--text-dim); letter-spacing: 0.08em; display: flex; align-items: center; gap: 6px; transition: color 0.4s; }
+  .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); transition: background 0.4s; }
+  .save-status.saved .save-dot { background: var(--green-text); }
+  .save-status.saved { color: var(--green-text); }
+
+  .reset-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--red-text); background: transparent; border: 1px solid var(--red-mid); padding: 5px 14px; cursor: pointer;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0% 50%);
+    transition: background 0.15s;
+  }
+  .reset-btn:hover { background: rgba(139,34,34,0.2); }
+  .reset-btn:active { transform: scale(0.95); }
+
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; }
+  .overlay.visible { display: flex; }
+  .confirm-box {
+    background: var(--bg-card); border: 1px solid var(--border-ornate); border-top: 2px solid var(--gold-dark);
+    padding: 28px 24px; text-align: center; max-width: 300px; width: 90%; position: relative;
+  }
+  .confirm-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent); }
+  .confirm-title { font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-light); margin-bottom: 10px; letter-spacing: 0.08em; }
+  .confirm-text { font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+  .confirm-btns { display: flex; gap: 10px; justify-content: center; }
+  .confirm-yes {
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.08em; color: var(--red-text);
+    background: rgba(139,34,34,0.2); border: 1px solid var(--red-mid); padding: 8px 20px; cursor: pointer;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0% 50%);
+  }
+  .confirm-yes:hover { background: rgba(139,34,34,0.4); }
+  .confirm-no {
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.08em; color: var(--gold);
+    background: transparent; border: 1px solid var(--gold-dark); padding: 8px 20px; cursor: pointer;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0% 50%);
+  }
+  .confirm-no:hover { background: rgba(201,147,58,0.1); }
+
+  .chain-connector { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 6px 0; margin: 2px 0; }
+  .chain-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--border-ornate), transparent); max-width: 60px; }
+  .chain-text { font-family: 'Cinzel', serif; font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .chain-text.has-flow { color: var(--gold-dark); }
+
+  .tier-card { background: var(--bg-card); border: 1px solid var(--border-ornate); position: relative; margin-bottom: 4px; }
+  .tier-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent); }
+  .corner { position: absolute; width: 12px; height: 12px; border-color: var(--gold-dark); border-style: solid; }
+  .corner-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .corner-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+  .corner-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+  .corner-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+  .tier-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px 0; }
+  .tier-header-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--border-ornate)); }
+  .tier-header-line.right { background: linear-gradient(to left, transparent, var(--border-ornate)); }
+  .tier-label { font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold); letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap; }
+
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; padding: 16px; }
+  .stat-block { display: flex; flex-direction: column; align-items: center; padding: 8px 12px; }
+  .stat-block + .stat-block { border-left: 1px solid var(--border-ornate); }
+
+  .big-num { font-family: 'Cinzel', serif; font-size: 56px; font-weight: 700; color: var(--gold-light); line-height: 1; margin-bottom: 6px; text-shadow: 0 0 20px rgba(201,147,58,0.3); transition: color 0.3s; }
+  .big-num.has-incoming { color: var(--green-text); text-shadow: 0 0 20px rgba(126,212,146,0.3); }
+
+  .stat-desc { font-size: 11px; color: var(--text-secondary); text-align: center; line-height: 1.5; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; }
+  .incoming-tag { font-size: 10px; color: var(--green-text); background: rgba(45,110,58,0.3); border: 1px solid rgba(126,212,146,0.2); border-radius: 2px; padding: 2px 8px; margin-top: 4px; display: none; letter-spacing: 0.05em; }
+
+  .counter-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .counter-btn {
+    width: 36px; height: 36px; border: 1px solid var(--gold-dark);
+    background: linear-gradient(135deg, #1e1218, #2a1820); color: var(--gold); font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+    transition: background 0.15s, color 0.15s; font-family: 'Cinzel', serif;
+  }
+  .counter-btn:hover { background: linear-gradient(135deg, #3a1a20, #4a2010); color: var(--gold-light); }
+  .counter-btn:active { transform: scale(0.92); }
+
+  .prog-section { padding: 0 16px 14px; }
+  .prog-label-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .prog-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+  .prog-pct { font-family: 'Cinzel', serif; font-size: 10px; color: var(--gold-dark); }
+  .prog-track { height: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-ornate); overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(to right, var(--gold-dark), var(--gold)); transition: width 0.3s ease; }
+
+  .status-banner {
+    margin: 0 16px 16px; padding: 7px 14px; text-align: center;
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.08em; border: 1px solid;
+    clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0% 50%);
+  }
+  .status-ready   { border-color: #2d6e3a; background: rgba(45,110,58,0.2);  color: var(--green-text); }
+  .status-partial { border-color: #7a5520; background: rgba(58,42,8,0.5);    color: var(--amber-text); }
+  .status-need    { border-color: #7a2020; background: rgba(58,10,10,0.5);   color: var(--red-text); }
+  .status-empty   { border-color: var(--border-ornate); background: rgba(255,255,255,0.03); color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-rule">
+    <div class="header-rule-line"></div><div class="header-diamond"></div><div class="header-rule-line"></div>
+  </div>
+  <div class="title-main">Food Tracker</div>
+  <div class="title-sub">Champion Ascension Planner</div>
+  <div class="header-rule" style="margin-top:10px;">
+    <div class="header-rule-line"></div><div class="header-diamond"></div><div class="header-rule-line"></div>
+  </div>
+</div>
+
+<div class="summary-bar">
+  <div class="sum-card"><div class="sum-val" id="s-ready">0</div><div class="sum-label">Ready</div></div>
+  <div class="sum-card"><div class="sum-val" id="s-food">0</div><div class="sum-label">Food owned</div></div>
+  <div class="sum-card"><div class="sum-val" id="s-need">0</div><div class="sum-label">Still needed</div></div>
+</div>
+
+<div class="save-bar">
+  <div class="save-status" id="save-status">
+    <div class="save-dot" id="save-dot"></div>
+    <span id="save-text">Loading...</span>
+  </div>
+  <button class="reset-btn" onclick="confirmReset()">&#9760; Reset all</button>
+</div>
+
+<div id="cards"></div>
+
+<div class="overlay" id="overlay">
+  <div class="confirm-box">
+    <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+    <div class="confirm-title">Reset Tracker?</div>
+    <div class="confirm-text">This will clear all your champion counts and cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="confirm-yes" onclick="doReset()">Confirm</button>
+      <button class="confirm-no" onclick="closeOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TIERS = [
+  { tier: 2, label: '2\u2605 \u2192 3\u2605  \u00b7  2 food per upgrade', foodPer: 2 },
+  { tier: 3, label: '3\u2605 \u2192 4\u2605  \u00b7  3 food per upgrade', foodPer: 3 },
+  { tier: 4, label: '4\u2605 \u2192 5\u2605  \u00b7  4 food per upgrade', foodPer: 4 },
+];
+
+const STORAGE_KEY = 'raid-food-tracker-v1';
+const state = { b2:0,f2:0,b3:0,f3:0,b4:0,f4:0 };
+let saveTimer = null;
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    setSaveStatus('saved');
+  } catch(e) { setSaveStatus('error'); }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      Object.keys(state).forEach(k => { if (saved[k] !== undefined) state[k] = saved[k]; });
+      setSaveStatus('saved');
+    } else {
+      setSaveStatus('new');
+    }
+  } catch(e) { setSaveStatus('new'); }
+}
+
+function setSaveStatus(type) {
+  const el = document.getElementById('save-status');
+  const dot = document.getElementById('save-dot');
+  const txt = document.getElementById('save-text');
+  el.className = 'save-status';
+  if (type === 'saved') {
+    el.classList.add('saved');
+    txt.textContent = 'Progress saved';
+  } else if (type === 'saving') {
+    txt.textContent = 'Saving...';
+  } else if (type === 'new') {
+    txt.textContent = 'No saved data yet';
+  } else {
+    txt.textContent = 'Could not save';
+  }
+}
+
+function scheduleSave() {
+  setSaveStatus('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveState, 600);
+}
+
+function adj(key, d) {
+  state[key] = Math.max(0, state[key] + d);
+  recalc();
+  scheduleSave();
+}
+
+function confirmReset() { document.getElementById('overlay').classList.add('visible'); }
+function closeOverlay() { document.getElementById('overlay').classList.remove('visible'); }
+function doReset() {
+  Object.keys(state).forEach(k => state[k] = 0);
+  closeOverlay();
+  recalc();
+  saveState();
+}
+
+function build() {
+  const c = document.getElementById('cards');
+  TIERS.forEach((t, i) => {
+    if (i > 0) {
+      const arrow = document.createElement('div');
+      arrow.className = 'chain-connector';
+      arrow.innerHTML = `<div class="chain-line"></div><div class="chain-text" id="arrow-${t.tier}">\u25bc 0 ascended flow into ${t.tier}\u2605 food</div><div class="chain-line"></div>`;
+      c.appendChild(arrow);
+    }
+    const div = document.createElement('div');
+    div.className = 'tier-card';
+    div.innerHTML = `
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="tier-header">
+        <div class="tier-header-line"></div>
+        <div class="tier-label">${t.label}</div>
+        <div class="tier-header-line right"></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-block">
+          <div class="big-num" id="disp-b${t.tier}">0</div>
+          <div class="stat-desc">${t.tier}\u2605 champions<br>ready to ascend</div>
+          <div class="counter-row">
+            <button class="counter-btn" data-key="b${t.tier}" data-d="-1">&#8722;</button>
+            <button class="counter-btn" data-key="b${t.tier}" data-d="1">&#43;</button>
+          </div>
+        </div>
+        <div class="stat-block">
+          <div class="big-num" id="disp-f${t.tier}">0</div>
+          <div class="stat-desc">${t.tier}\u2605 food<br>champions owned</div>
+          <div class="incoming-tag" id="inc${t.tier}"></div>
+          <div class="counter-row">
+            <button class="counter-btn" data-key="f${t.tier}" data-d="-1">&#8722;</button>
+            <button class="counter-btn" data-key="f${t.tier}" data-d="1">&#43;</button>
+          </div>
+        </div>
+      </div>
+      <div class="prog-section">
+        <div class="prog-label-row">
+          <span class="prog-label">Food progress</span>
+          <span class="prog-pct" id="pct${t.tier}">0%</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog${t.tier}" style="width:0%"></div></div>
+      </div>
+      <div class="status-banner status-empty" id="note${t.tier}">Awaiting champions...</div>
+    `;
+    c.appendChild(div);
+  });
+
+  document.getElementById('cards').addEventListener('click', e => {
+    const btn = e.target.closest('[data-key]');
+    if (btn) adj(btn.dataset.key, parseInt(btn.dataset.d));
+  });
+}
+
+function recalc() {
+  let sReady=0, sFood=0, sNeed=0, cascadeIn=0;
+  TIERS.forEach((t, i) => {
+    const base = state['b'+t.tier];
+    const manual = state['f'+t.tier];
+    const total = manual + cascadeIn;
+    const need = t.foodPer;
+    const possible = base === 0 ? 0 : Math.min(base, Math.floor(total / need));
+    const foodNeeded = base * need;
+    const shortfall = Math.max(0, foodNeeded - total);
+    const pct = foodNeeded > 0 ? Math.min(100, Math.round((total / foodNeeded) * 100)) : 0;
+
+    sFood += manual;
+    if (base > 0) { sReady += possible; sNeed += shortfall; }
+
+    document.getElementById('disp-b'+t.tier).textContent = base;
+
+    const foodEl = document.getElementById('disp-f'+t.tier);
+    foodEl.textContent = total;
+    foodEl.className = 'big-num' + (cascadeIn > 0 ? ' has-incoming' : '');
+
+    const incEl = document.getElementById('inc'+t.tier);
+    if (cascadeIn > 0) {
+      incEl.style.display = 'block';
+      incEl.textContent = '+' + cascadeIn + ' from previous tier';
+    } else {
+      incEl.style.display = 'none';
+    }
+
+    if (i > 0) {
+      const arrowEl = document.getElementById('arrow-'+t.tier);
+      if (arrowEl) {
+        arrowEl.textContent = '\u25bc ' + cascadeIn + ' ascended flow into ' + t.tier + '\u2605 food';
+        arrowEl.className = 'chain-text' + (cascadeIn > 0 ? ' has-flow' : '');
+      }
+    }
+
+    document.getElementById('prog'+t.tier).style.width = pct + '%';
+    document.getElementById('pct'+t.tier).textContent = pct + '%';
+
+    const noteEl = document.getElementById('note'+t.tier);
+    noteEl.className = 'status-banner';
+    if (base === 0) {
+      noteEl.classList.add('status-empty');
+      noteEl.textContent = 'Awaiting champions...';
+    } else if (possible >= base) {
+      noteEl.classList.add('status-ready');
+      noteEl.textContent = 'All ' + base + ' ascension' + (base > 1 ? 's' : '') + ' ready \u2014 march to battle!';
+    } else if (possible > 0) {
+      noteEl.classList.add('status-partial');
+      noteEl.textContent = possible + ' of ' + base + ' ready \u2014 need ' + shortfall + ' more food.';
+    } else {
+      noteEl.classList.add('status-need');
+      noteEl.textContent = 'Need ' + foodNeeded + ' food \u2014 short by ' + shortfall + '.';
+    }
+
+    cascadeIn = possible;
+  });
+
+  document.getElementById('s-ready').textContent = sReady;
+  document.getElementById('s-food').textContent = sFood;
+  document.getElementById('s-need').textContent = sNeed;
+}
+
+build();
+loadState();
+recalc();
+</script>
+</body>
+</html>
